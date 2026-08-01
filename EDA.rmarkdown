@@ -123,3 +123,4 @@ The diagonal density plots indicate that most predictor variables have unimodal 
 The exploratory analysis suggests that predicting water potability is likely to be a challenging classification problem. The predictor variables do not exhibit strong separation between potable and non-potable samples individually, and the relationships among predictors are generally weak. Consequently, it is unlikely that any single variable will provide accurate predictions on its own. Instead, machine learning methods that combine information from multiple predictors may be better suited for identifying patterns associated with water potability. The next section therefore develops and compares classification tree and random forest models using the tidymodels framework
 
 [Click here for the Modeling Page](Modeling.html)
+
