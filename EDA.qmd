@@ -45,7 +45,7 @@ water_data <- read_csv("water_potability.csv")
 glimpse(water_data)
 ```
 
-Since it is a binary variable, lets turn `Potability` into a factor variable. This makes more sense than keeping it numeric.
+`Potability` is a classification variable, so lets make it a factor rather than keeping it numeric. 
 
 ```{r}
 water_data <- water_data |>
@@ -75,7 +75,7 @@ Lets check the how our response variable is distributed.
 ```{r}
 ggplot(water_data, aes(x = Potability)) +
   geom_bar(fill = "steelblue") +
-  geom_text(stat = "count", 
+  geom_text(stat = "count",                   # adds our counts on top of the bars
             aes(label = after_stat(count)), 
             vjust = -0.5) +
   labs(x = "Potability",
@@ -89,7 +89,7 @@ ggplot(water_data, aes(x = Potability)) +
 To begin the exploratory analysis, summary statistics were calculated separately for potable and non-potable water samples. Comparing the means and standard deviations provides an initial indication of whether the predictor variables differ between the two response groups.
 
 ```{r}
-water_data |>
+water_data_summary <- water_data |>
   group_by(Potability) |>
   summarize(
     across(
@@ -100,15 +100,17 @@ water_data |>
       )
     )
   )
+
+water_data_summary
 ```
 
-While several variables show modest differences in their average values, no single predictor appears to completely distinguish potable from non-potable water. This suggests that a predictive model incorporating multiple variables may be more effective than relying on any individual measurement.
+This summary indicates that the predictor means are very similar for potable and non-potable water samples. In nearly every case, the difference in group means is small relative to the variability within each group, suggesting that no individual predictor strongly distinguishes the two classes.
 
 ## Pairs Plot
 
 This `ggpairs` output provides a comprehensive summary of the relationships among the predictor variables.
 
-```{r message = FALSE}
+```{r message = FALSE warning = FALSE}
 ggpairs(
   water_data,
   columns = 1:9, # leave out column 10 (potability)
@@ -116,7 +118,7 @@ ggpairs(
   )
 ```
 
-The diagonal density plots indicate that most predictor variables have unimodal distributions with substantial overlap between potable and non-potable water samples. The scatterplots do not indicate any strong linear relationships between predictor variables, and the correlation coefficients confirm that most pairwise correlations are relatively weak (\|r\| \< 0.37). Overall, the exploratory analysis suggests that no single predictor is sufficient to classify water potability on its own. Instead, combining several predictors within a machine learning model is likely to provide greater predictive performance.
+The diagonal density plots indicate that most predictor variables have unimodal distributions with substantial overlap between potable and non-potable water samples. The scatterplots do not indicate any strong linear relationships between predictor variables, and the correlation coefficients confirm that most pairwise correlations are relatively weak (|r| < 0.37). Overall, the exploratory analysis suggests that no single predictor is sufficient to classify water potability on its own. Instead, combining several predictors within a machine learning model is likely to provide greater predictive performance.
 
 ## Discussion
 

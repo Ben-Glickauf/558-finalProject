@@ -1,5 +1,194 @@
 ---
 title: "Modeling"
 format: html
+editor_options: 
+  chunk_output_type: console
 ---
+
+## Introduction
+
+The objective of this analysis is to develop predictive models for classifying whether or not a water sample is potable. The exploratory data analysis indicated that no individual predictor clearly distinguishes potable from non-potable water samples, suggesting that multiple predictors should be considered simultaneously.
+
+Two tree-based classification methods will be evaluated using the `tidymodels` framework: a classification tree and a random forest. Both models will be trained on a training set consisting of 70% of the observations and evaluated using five-fold cross-validation with log-loss as the performance metric. The best model from each family will then be compared on the test set to determine the best predictive model.
+
+
+# Set up the Data
+
+```{r}
+# Load packages
+library(tidymodels)
+library(tidyverse)
+```
+
+```{r}
+# Read the data
+water_data <- read_csv("water_potability.csv") |>
+  mutate(Potability = as.factor(Potability))
+
+# Take a look
+water_data
+```
+
+## Training/Test Split
+
+To evaluate how well each model generalizes to new observations, lets randomly divide the data into training and testing sets.
+
+```{r}
+# Set seed for reproducibility
+set.seed(503)
+
+water_split <- initial_split(
+  water_data,
+  # 70/30 split
+  prop = 0.70,
+  strata = Potability
+)
+
+water_train <- training(water_split)
+water_test <- testing(water_split)
+```
+
+Seventy percent of the observations were allocated to the training set, while the remaining thirty percent were reserved for evaluating the final models. Because the response variable is binary, stratified sampling was used to preserve approximately the same proportion of potable and non-potable water samples in each dataset.
+
+## Cross Validation
+
+Model tuning was performed using five-fold cross-validation on the training data. In this procedure, the training set is divided into five approximately equal-sized subsets. During each iteration, four subsets are used to train the model while the remaining subset is used for validation. This process is repeated until each subset has served as the validation set once. The average performance across all five folds is then used to compare competing models and tuning parameter values.
+
+Again, stratification was used to maintain similar proportions of potable and non-potable water samples within each fold.
+
+```{r}
+water_folds <- 
+  vfold_cv(
+    water_train,
+    v = 5,
+    strata = Potability
+  )
+
+# Investigate the folds
+water_folds
+```
+
+## Data Preparation
+
+The `tidymodels` framework uses a recipe to define the response variable and predictor variables that will be used throughout the modeling process. The recipe also serves as the location where any future preprocessing steps could be added if necessary. For this analysis, all available water quality measurements were included as predictors of water potability.
+
+```{r}
+water_recipe <-
+  recipe(Potability ~ ., data = water_train)
+```
+
+## Classification Tree
+
+A classification tree is a supervised learning method used to predict a categorical response by repeatedly partitioning the predictor space into smaller and more homogeneous groups. At each split, the algorithm searches for the predictor and corresponding split point that best separates the response classes. This process continues until a stopping criterion is met, producing a sequence of decision rules that classify new observations.
+
+One advantage of classification trees is that they are easy to interpret and can naturally model nonlinear relationships and interactions among predictors. However, trees that are allowed to grow too large often overfit the training data, resulting in poor performance on new observations. To reduce overfitting, the cost complexity parameter controls the amount of pruning applied to the tree. Smaller values allow more complex trees, while larger values produce simpler trees.
+
+The classification tree model was specified using the `rpart` engine with the cost complexity parameter designated for tuning.
+
+```{r}
+tree_spec <-
+  decision_tree(
+    cost_complexity = tune()
+  ) |>
+  set_engine("rpart") |>
+  set_mode("classification")
+```
+
+The model specification was combined with the recipe using a workflow.
+
+```{r}
+tree_workflow <-
+  workflow() |>
+  add_recipe(water_recipe) |>
+  add_model(tree_spec)
+```
+
+A regular grid consisting of fifteen candidate values for the cost complexity parameter was created.
+
+```{r}
+tree_grid <-
+  grid_regular(
+    cost_complexity(),
+    levels = 15
+  )
+```
+
+Each candidate model was evaluated using five-fold cross-validation. Multinomial log-loss was used as the performance metric because it evaluates both the accuracy of the predicted class and the confidence of the predicted probabilities.
+
+```{r}
+tree_results <-
+  tune_grid(
+    tree_workflow,
+    resamples = water_folds,
+    grid = tree_grid,
+    metrics = metric_set(mn_log_loss)
+  )
+```
+
+The tuning results were then examined to identify the value of the cost complexity parameter that minimized the average log-loss.
+
+```{r}
+show_best(tree_results, metric = "mn_log_loss")
+```
+
+As we can see, our best classification tree model is `pre0_mod14_post0` with a standard error of `r show_best(tree_results, metric = "mn_log_loss")[1,6]`.
+
+
+## Random Forest
+
+While a classification tree consists of a single decision tree, a random forest constructs a large collection of decision trees and combines their predictions. Each tree is trained using a bootstrap sample of the training data, and at every split only a random subset of the predictor variables is considered. These sources of randomness reduce the correlation among individual trees, producing a model that is generally more accurate and less prone to overfitting than a single classification tree.
+
+The primary tuning parameter for a random forest is mtry, which specifies the number of predictor variables randomly considered at each split. Smaller values increase the diversity among trees, while larger values allow each tree to consider more information when determining the optimal split.
+
+The random forest model was specified using the `ranger` engine with 500 trees.
+
+```{r}
+rf_spec <-
+  rand_forest(
+    trees = 500,
+    mtry = tune()
+  ) |>
+  set_engine("ranger") |>
+  set_mode("classification")
+```
+
+The random forest specification was combined with the recipe using another workflow.
+
+```{r}
+rf_workflow <-
+  workflow() |>
+  add_recipe(water_recipe) |>
+  add_model(rf_spec)
+```
+
+Since there are nine predictor variables in the dataset, values of `mtry` ranging from 1 to 9 were considered.
+
+```{r}
+rf_grid <-
+  tibble(
+    mtry = 1:9
+  )
+```
+
+Each candidate random forest model was evaluated using the same five-fold cross-validation procedure and multinomial log-loss metric used for the classification tree.
+
+```{r}
+rf_results <-
+  tune_grid(
+    rf_workflow,
+    resamples = water_folds,
+    grid = rf_grid,
+    metrics = metric_set(mn_log_loss)
+  )
+```
+
+  The tuning results were then examined to identify the value of `mtry` that minimized the average log-loss.
+
+```{r}
+show_best(rf_results, metric = "mn_log_loss")
+```
+
+As we can see, our best random forest model is `pre0_mod8_post0` with a standard error of `r show_best(rf_results, metric = "mn_log_loss")[1,6]`
+
+## Final Model Selection
 
