@@ -11,8 +11,7 @@ The objective of this analysis is to develop predictive models for classifying w
 
 Two tree-based classification methods will be evaluated using the `tidymodels` framework: a classification tree and a random forest. Both models will be trained on a training set consisting of 70% of the observations and evaluated using five-fold cross-validation with log-loss as the performance metric. The best model from each family will then be compared on the test set to determine the best predictive model.
 
-
-# Set up the Data
+## Set up the Data
 
 ```{r}
 # Load packages
@@ -129,10 +128,12 @@ The tuning results were then examined to identify the value of the cost complexi
 
 ```{r}
 show_best(tree_results, metric = "mn_log_loss")
+
+best_tree <-
+  select_best(tree_results, metric = "mn_log_loss")
 ```
 
 As we can see, our best classification tree model is `pre0_mod14_post0` with a standard error of `r show_best(tree_results, metric = "mn_log_loss")[1,6]`.
-
 
 ## Random Forest
 
@@ -182,13 +183,96 @@ rf_results <-
   )
 ```
 
-  The tuning results were then examined to identify the value of `mtry` that minimized the average log-loss.
+The tuning results were then examined to identify the value of `mtry` that minimized the average log-loss.
 
 ```{r}
 show_best(rf_results, metric = "mn_log_loss")
+
+best_rf <-
+  select_best(rf_results, metric = "mn_log_loss")
 ```
 
 As we can see, our best random forest model is `pre0_mod8_post0` with a standard error of `r show_best(rf_results, metric = "mn_log_loss")[1,6]`
 
 ## Final Model Selection
 
+The cross-validation procedure identified the optimal tuning parameters for both the classification tree and random forest models. Each model was then finalized using its selected tuning parameter and fit to the entire training dataset. Performance was evaluated on the test set using multinomial log-loss. Because the test data were not used during model training or tuning, they provide an unbiased assessment of each model's predictive performance.
+
+### Final Classification Tree
+
+The classification tree workflow was finalized using the optimal value of the cost complexity parameter selected during cross-validation.
+
+```{r}
+final_tree_workflow <-
+  finalize_workflow(
+    tree_workflow,
+    best_tree
+  )
+```
+
+The finalized model was then fit to the training data and evaluated on the test set.
+
+```{r}
+tree_fit <-
+  last_fit(
+    final_tree_workflow,
+    split = water_split,
+    metrics = metric_set(mn_log_loss)
+  )
+```
+
+The test-set performance was extracted using
+
+```{r}
+collect_metrics(tree_fit)
+```
+
+### Final Random Forest
+
+Similarly, the random forest workflow was finalized using the value of `mtry` that minimized the cross-validation log-loss.
+
+```{r}
+final_rf_workflow <-
+  finalize_workflow(
+    rf_workflow,
+    best_rf
+  )
+```
+
+The finalized random forest model was then evaluated on the test set.
+
+```{r}
+rf_fit <-
+  last_fit(
+    final_rf_workflow,
+    split = water_split,
+    metrics = metric_set(mn_log_loss)
+  )
+```
+
+The resulting test-set performance was obtained using
+
+```{r}
+collect_metrics(rf_fit)
+```
+
+### Comparing the Models
+
+The log-loss values from both models were compared on the test data.
+
+```{r}
+tree_metrics <- collect_metrics(tree_fit)
+rf_metrics   <- collect_metrics(rf_fit)
+
+bind_rows(
+  Classification_Tree = tree_metrics,
+  Random_Forest = rf_metrics,
+  .id = "Model"
+)
+```
+
+## Final Discussion
+
+The random forest achieved the smaller log-loss on the test data and was therefore selected as the final predictive model.
+
+The superior performance of the random forest is consistent with the characteristics of the dataset observed during the exploratory data analysis. The predictor variables showed substantial overlap between potable and non-potable water samples, suggesting that no single predictor strongly distinguished the two classes. By combining the predictions of many decision trees, each built from different subsets of the data and predictors, the random forest is able to capture more complex relationships while reducing the variability associated with a single classification tree. As a result, the random forest produced the most accurate probability predictions and will be used in the API developed in the next section.
