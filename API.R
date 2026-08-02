@@ -1,4 +1,4 @@
-# Load packages -----------------------------------------------------------
+# Load packages
 
 library(tidymodels)
 library(tidyverse)
@@ -6,7 +6,7 @@ library(plumber)
 library(yardstick)
 
 
-# Read data and fit final model --------------------------------------------
+# Read data and fit final model
 
 water_data <- read_csv("water_potability.csv") |>
   mutate(Potability = as.factor(Potability))
@@ -43,7 +43,7 @@ final_model <-
   )
 
 
-# Store predictions for confusion matrix -------------------------------
+# Store predictions for confusion matrix
 
 water_predictions <-
   predict(
@@ -54,7 +54,7 @@ water_predictions <-
   bind_cols(water_data)
 
 
-# Pred endpoint -----------------------------------------------------------
+# Pred endpoint
 
 #* Predict water potability
 #*
@@ -94,14 +94,16 @@ function(
 
 
 # Example API calls:
-# POST http://127.0.0.1:8000/pred
-#
-# POST http://127.0.0.1:8000/pred?ph=7&Hardness=200&Solids=15000&Chloramines=7&Sulfate=300&Conductivity=400&Organic_carbon=10&Trihalomethanes=60&Turbidity=4
-#
-# POST http://127.0.0.1:8000/pred?ph=8&Hardness=250&Solids=10000&Chloramines=6&Sulfate=350&Conductivity=450&Organic_carbon=12&Trihalomethanes=50&Turbidity=3
+# (Replace PORT with the port shown when the API starts.)
+
+# curl -X POST "http://127.0.0.1:PORT/pred"
+
+# curl -X POST "http://127.0.0.1:PORT/pred?ph=7&Hardness=200&Solids=15000&Chloramines=7&Sulfate=300&Conductivity=400&Organic_carbon=10&Trihalomethanes=60&Turbidity=4"
+
+# curl -X POST "http://127.0.0.1:PORT/pred?ph=8&Hardness=250&Solids=10000&Chloramines=6&Sulfate=350&Conductivity=450&Organic_carbon=12&Trihalomethanes=50&Turbidity=3"
 
 
-# Info endpoint -----------------------------------------------------------
+# Info endpoint
 
 #* Provide information about the project
 #*
@@ -111,24 +113,28 @@ function(){
   
   list(
     name = "Benjamin Glickauf",
-    github_pages = "YOUR_GITHUB_PAGES_URL_HERE"
+    github_pages = "https://ben-glickauf.github.io/558-finalProject/"
   )
   
 }
 
 
-# Confusion matrix endpoint -----------------------------------------------
+# Confusion matrix endpoint
 
 #* Plot confusion matrix
-#*
-#* @png
+#* @serializer png
 #* @get /confusion
-function(){
-  conf_mat(
+function() {
+  
+  cm <- conf_mat(
     data = water_predictions,
     truth = Potability,
     estimate = .pred_class
-  ) |>
-    autoplot()
+  )
   
+  p <- autoplot(cm, type = "heatmap") +
+    geom_label(aes(label = Freq), fill = "white")
+  
+  print(p)
 }
+
