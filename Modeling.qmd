@@ -69,11 +69,12 @@ water_folds
 
 ## Data Preparation
 
-The `tidymodels` framework uses a recipe to define the response variable and predictor variables that will be used throughout the modeling process. The recipe also serves as the location where any future preprocessing steps could be added if necessary. For this analysis, all available water quality measurements were included as predictors of water potability.
+The `tidymodels` framework uses a recipe to define the response variable and predictor variables used throughout the modeling process. The recipe also provides a location for preprocessing steps that are applied consistently during model training and prediction. Because several predictors contain missing values, median imputation was added to replace missing predictor values using information from the training data.
 
 ```{r}
 water_recipe <-
-  recipe(Potability ~ ., data = water_train)
+  recipe(Potability ~ ., data = water_train) |>
+  step_impute_median(all_predictors())
 ```
 
 ## Classification Tree
@@ -192,7 +193,7 @@ best_rf <-
   select_best(rf_results, metric = "mn_log_loss")
 ```
 
-As we can see, our best random forest model is `pre0_mod8_post0` with a standard error of `r show_best(rf_results, metric = "mn_log_loss")[1,6]`
+As we can see, our best random forest model is `pre0_mod7_post0` with a standard error of `r show_best(rf_results, metric = "mn_log_loss")[1,6]`
 
 ## Final Model Selection
 
@@ -273,6 +274,6 @@ bind_rows(
 
 ## Final Discussion
 
-The random forest achieved the smaller log-loss on the test data and was therefore selected as the final predictive model.
+The random forest model achieved the smaller log-loss on the test data and was therefore selected as the final predictive model. The random forest had a test-set log-loss of 0.621, compared to 0.659 for the classification tree model, indicating that it produced more accurate probability predictions for water potability.
 
-The superior performance of the random forest is consistent with the characteristics of the dataset observed during the exploratory data analysis. The predictor variables showed substantial overlap between potable and non-potable water samples, suggesting that no single predictor strongly distinguished the two classes. By combining the predictions of many decision trees, each built from different subsets of the data and predictors, the random forest is able to capture more complex relationships while reducing the variability associated with a single classification tree. As a result, the random forest produced the most accurate probability predictions and will be used in the API developed in the next section.
+The improved performance of the random forest is consistent with the characteristics of the dataset observed during the exploratory data analysis. The predictor variables showed substantial overlap between potable and non-potable water samples, suggesting that no single predictor strongly distinguished the two classes. By combining predictions from many decision trees, each built using different bootstrap samples and subsets of predictors, the random forest can capture more complex relationships while reducing the variability associated with a single classification tree. Therefore, the random forest was selected as the final model and will be used in the API developed in the next section.
