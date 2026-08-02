@@ -10,8 +10,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Install required R packages
-RUN R -e "install.packages('plumber', repos='https://cloud.r-project.org', dependencies=TRUE)"
-RUN R -e "install.packages('tidymodels', repos='https://cloud.r-project.org', dependencies=TRUE)"
+RUN R -e "install.packages(c('plumber','tidymodels','ranger'), repos='https://cloud.r-project.org')"
 
 # Copy files into the container
 COPY API.R /home/API.R
