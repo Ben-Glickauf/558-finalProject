@@ -124,7 +124,6 @@ function(){
 #* @png
 #* @get /confusion
 function(){
-  
   conf_mat(
     data = water_predictions,
     truth = Potability,
