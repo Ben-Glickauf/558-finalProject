@@ -3,7 +3,6 @@
 library(tidymodels)
 library(tidyverse)
 library(plumber)
-library(yardstick)
 
 
 # Read data and fit final model
@@ -96,11 +95,11 @@ function(
 # Example API calls:
 # (Replace PORT with the port shown when the API starts.)
 
-# curl -X POST "http://127.0.0.1:PORT/pred"
+# curl -X POST "http://127.0.0.1:32466/pred"
 
-# curl -X POST "http://127.0.0.1:PORT/pred?ph=7&Hardness=200&Solids=15000&Chloramines=7&Sulfate=300&Conductivity=400&Organic_carbon=10&Trihalomethanes=60&Turbidity=4"
+# curl -X POST "http://127.0.0.1:32466/pred?ph=7&Hardness=200&Solids=15000&Chloramines=7&Sulfate=300&Conductivity=400&Organic_carbon=10&Trihalomethanes=60&Turbidity=4"
 
-# curl -X POST "http://127.0.0.1:PORT/pred?ph=8&Hardness=250&Solids=10000&Chloramines=6&Sulfate=350&Conductivity=450&Organic_carbon=12&Trihalomethanes=50&Turbidity=3"
+# curl -X POST "http://127.0.0.1:32466/pred?ph=8&Hardness=250&Solids=10000&Chloramines=6&Sulfate=350&Conductivity=450&Organic_carbon=12&Trihalomethanes=50&Turbidity=3"
 
 
 # Info endpoint
